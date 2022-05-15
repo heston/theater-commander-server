@@ -1,6 +1,12 @@
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
-import {config, https, Request, Response} from "firebase-functions";
+import {
+  config,
+  logger,
+  runWith,
+  Request,
+  Response,
+} from "firebase-functions";
 
 admin.initializeApp(config().firebase);
 
@@ -21,8 +27,11 @@ function isAuthorized(key: string): boolean {
 
   // Fail closed if key is missing
   if (!secretkey) {
+    logger.debug("No secret key provided.");
     return false;
   }
+
+  logger.debug(`isAuthorized: secretKey: ${secretkey}; requestKey: ${key}`);
 
   try {
     return crypto.timingSafeEqual(
@@ -90,5 +99,7 @@ const turnOff = withAuth((req, res) => {
       .catch(() => res.status(503).send("Could not save command to database"));
 });
 
-exports.turnOn = https.onRequest(turnOn);
-exports.turnOff = https.onRequest(turnOff);
+exports.turnOn = runWith({secrets: ["IFTTT_SECRETKEY"]})
+    .https.onRequest(turnOn);
+exports.turnOff = runWith({secrets: ["IFTTT_SECRETKEY"]})
+    .https.onRequest(turnOff);
