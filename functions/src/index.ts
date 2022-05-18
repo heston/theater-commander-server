@@ -31,8 +31,6 @@ function isAuthorized(key: string): boolean {
     return false;
   }
 
-  logger.debug(`isAuthorized: secretKey: ${secretkey}; requestKey: ${key}`);
-
   try {
     return crypto.timingSafeEqual(
         Buffer.from(key, "utf8"),
@@ -52,8 +50,12 @@ function isAuthorized(key: string): boolean {
  */
 function withAuth(fcn: (req: Request, res: Response) => void) {
   return function withAuthImpl(req: Request, res: Response) {
-    // Get the secret key from the request headers
-    const secretKey = req.header("authorization") || "";
+    // Get the auth token from the request, looking in the body and headers.
+    const secretKey = (
+      req.body.authentication ||
+      req.header("authorization") ||
+      ""
+    );
 
     if (!isAuthorized(secretKey)) {
       res.status(401).send("Unauthorized");
